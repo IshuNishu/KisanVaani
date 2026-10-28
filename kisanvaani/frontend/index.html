@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KisanVaani – Voice AI for Farmers</title>
+<style>
+:root{--bg:#f6f4ec;--sf:#fff;--tx:#1d2a1f;--mu:#5d6b5f;--ac:#2e7d32;--ac2:#e8f3e8;--bd:#dcd8c8;--wn:#b45309;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121a14;--sf:#1b261e;--tx:#e6efe6;--mu:#9bb09d;--ac:#66bb6a;--ac2:#223a26;--bd:#2e3d31;--wn:#fbbf24}}
+:root[data-theme="dark"]{--bg:#121a14;--sf:#1b261e;--tx:#e6efe6;--mu:#9bb09d;--ac:#66bb6a;--ac2:#223a26;--bd:#2e3d31;--wn:#fbbf24}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Noto Sans Devanagari",Segoe UI,sans-serif}
+header{padding:18px 16px 8px;max-width:960px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+h1{margin:0;font-size:22px}h1 small{display:block;font-size:13px;font-weight:400;color:var(--mu)}
+main{max-width:960px;margin:auto;padding:8px 16px 40px;display:grid;gap:16px;grid-template-columns:1.4fr 1fr}
+@media(max-width:800px){main{grid-template-columns:1fr}}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:14px}
+h2{font-size:15px;margin:0 0 10px}
+#chat{height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px}
+.m{max-width:88%;padding:9px 12px;border-radius:12px;white-space:pre-wrap}
+.u{align-self:flex-end;background:var(--ac);color:#fff}.b{align-self:flex-start;background:var(--ac2)}
+.src{display:block;font-size:12px;color:var(--mu);margin-top:4px}
+.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+input,select,button{font:inherit;color:var(--tx);background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:9px 11px}
+input[type=text]{flex:1;min-width:140px}
+button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+#mic{width:56px;height:56px;border-radius:50%;font-size:24px;padding:0}
+#mic.on{background:#c62828;border-color:#c62828;color:#fff;animation:pl 1s infinite}
+@keyframes pl{50%{opacity:.6}}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chips button{font-size:13px;padding:5px 9px;border-radius:20px}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:5px 4px;border-bottom:1px solid var(--bd);text-align:left}
+.up{color:var(--ac)}.dn{color:#c62828}.note{font-size:12px;color:var(--mu);margin-top:6px}
+.warn{color:var(--wn);font-size:12px}img#pv{max-width:100%;max-height:120px;border-radius:8px;margin-top:8px;display:none}
+</style></head><body>
+<header><h1>🌾 KisanVaani <small id="tag">Voice AI assistant for farmers</small></h1>
+<div class="row" style="margin:0"><select id="lang"><option value="hi-IN">हिन्दी</option><option value="en-IN">English</option></select>
+<button id="th">🌓</button></div></header>
+<main>
+<section class="card"><h2 id="t1">Ask by voice or text</h2>
+<div id="chat" aria-live="polite"></div>
+<div class="chips" id="chips"></div>
+<div class="row"><button id="mic" class="p" title="Hold / tap to speak">🎤</button>
+<input type="text" id="q" placeholder="Type your question…">
+<button class="p" id="go">Ask</button></div>
+<div class="row"><label class="note">📷 Leaf photo: <input type="file" id="img" accept="image/*" capture="environment"></label></div>
+<img id="pv" alt="Leaf preview">
+<div class="note">Mic uses your browser’s speech engine (Chrome recommended). Replies are spoken aloud.</div></section>
+<aside style="display:grid;gap:16px;align-content:start">
+<section class="card"><h2>📈 Mandi prices (₹/quintal)</h2>
+<select id="dist"><option>Lucknow</option><option>Kanpur</option><option>Varanasi</option></select>
+<table id="pt"></table><div class="warn">Sample data for demo. Production: Agmarknet / data.gov.in API.</div></section>
+<section class="card"><h2>🏛️ Scheme checker</h2>
+<div class="row" style="margin-top:0"><select id="land"><option value="s">Land: up to 2 ha</option><option value="m">Land: above 2 ha</option><option value="n">No land</option></select>
+<select id="inst"><option value="n">Not a taxpayer</option><option value="y">Income-tax payer</option></select>
+<button class="p" id="chk">Check</button></div><div id="sr" class="note" style="margin-top:10px"></div></section>
+</aside></main>
+<script>
+const KB=[
+{k:["yellow","peele","peela","पीले","पीला","gehun","gehu","गेहूं","wheat","rust","रतुआ"],src:"ICAR-IIWBR wheat advisory",
+hi:"गेहूं में पीले पत्ते पीला रतुआ (यलो रस्ट) या नाइट्रोजन की कमी से हो सकते हैं। पत्तों पर पीला पाउडर दिखे तो प्रोपिकोनाज़ोल 25% EC (1 मिली/लीटर पानी) का छिड़काव करें। पाउडर न हो तो प्रति एकड़ 25 किलो यूरिया डालें। पास के KVK से पुष्टि कर लें।",
+en:"Yellow wheat leaves can be yellow rust or nitrogen deficiency. If you see yellow powder, spray propiconazole 25% EC (1 ml/litre). If no powder, apply about 25 kg urea per acre. Confirm with your KVK."},
+{k:["dhan","धान","rice","paddy","blast","jhulsa","भूरे","धब्बे","spots"],src:"ICAR-NRRI rice advisory",
+hi:"धान में आँख जैसे धब्बे ब्लास्ट रोग के लक्षण हैं। ट्राइसाइक्लाज़ोल 75% WP (0.6 ग्राम/लीटर) का छिड़काव करें और अधिक यूरिया न डालें। खेत में पानी का जमाव संतुलित रखें।",
+en:"Eye-shaped spots on paddy indicate blast. Spray tricyclazole 75% WP (0.6 g/litre) and avoid excess urea. Keep water levels balanced."},
+{k:["aloo","आलू","potato","jhulsa","झुलसा","blight","late"],src:"ICAR-CPRI potato advisory",
+hi:"आलू में पत्तों पर भूरे-काले धब्बे पछेती झुलसा (लेट ब्लाइट) हैं। मैन्कोज़ेब 75% WP (2.5 ग्राम/लीटर) का छिड़काव करें; बादल और नमी में 7–10 दिन पर दोहराएँ।",
+en:"Brown-black patches on potato leaves point to late blight. Spray mancozeb 75% WP (2.5 g/litre) and repeat every 7–10 days in cloudy, humid weather."},
+{k:["sarson","सरसों","mustard","mahu","माहू","aphid","कीड़े","keede","insects"],src:"ICAR-DRMR mustard advisory",
+hi:"सरसों में माहू (एफिड) दिखे तो इमिडाक्लोप्रिड 17.8% SL (0.3 मिली/लीटर) का छिड़काव शाम को करें। फूल खिलने पर मधुमक्खियों का ध्यान रखें।",
+en:"For aphids on mustard, spray imidacloprid 17.8% SL (0.3 ml/litre) in the evening and protect bees during flowering."},
+{k:["ganna","गन्ना","sugarcane","red rot","लाल","सड़न"],src:"ICAR-IISR sugarcane advisory",
+hi:"गन्ने में लाल सड़न के लक्षण (अंदर लाल रंग, खट्टी गंध) मिलें तो प्रभावित पौधे उखाड़कर जला दें, स्वस्थ बीज और रोग-रोधी किस्म लगाएँ।",
+en:"For red rot in sugarcane (red internal tissue, sour smell), uproot and burn affected clumps and use healthy seed of resistant varieties."},
+{k:["tamatar","टमाटर","tomato","curl","मुड़"],src:"ICAR-IIHR tomato advisory",
+hi:"टमाटर में पत्ते मुड़ना लीफ कर्ल वायरस है, जो सफेद मक्खी फैलाती है। पीले चिपचिपे ट्रैप लगाएँ, प्रभावित पौधे हटाएँ और नीम तेल (5 मिली/लीटर) छिड़कें।",
+en:"Leaf curl in tomato is a virus spread by whitefly. Use yellow sticky traps, remove infected plants and spray neem oil (5 ml/litre)."},
+{k:["pm-kisan","pm kisan","किसान सम्मान","samman","6000","सम्मान"],src:"PM-KISAN guidelines (pmkisan.gov.in)",
+hi:"पीएम-किसान में पात्र किसान परिवार को ₹6,000 प्रति वर्ष, तीन किस्तों में मिलते हैं। आधार, बैंक खाता और ज़मीन के कागज़ चाहिए। pmkisan.gov.in या CSC पर रजिस्टर करें और e-KYC कराएँ।",
+en:"PM-KISAN gives eligible farmer families ₹6,000 per year in three instalments. You need Aadhaar, a bank account and land records. Register at pmkisan.gov.in or a CSC and complete e-KYC."},
+{k:["bima","बीमा","insurance","fasal","फसल बीमा","pmfby"],src:"PMFBY guidelines",
+hi:"फसल बीमा (पीएमएफबीवाई) में खरीफ पर 2% और रबी पर 1.5% प्रीमियम लगता है। बैंक, CSC या pmfby.gov.in पर बुवाई के तय समय में आवेदन करें।",
+en:"Under PMFBY (crop insurance) farmers pay 2% premium for kharif and 1.5% for rabi. Apply via bank, CSC or pmfby.gov.in before the cut-off date."},
+{k:["kcc","credit","कर्ज","loan","लोन","ऋण","क्रेडिट"],src:"Kisan Credit Card scheme",
+hi:"किसान क्रेडिट कार्ड से खेती के लिए सस्ता कर्ज मिलता है (समय पर चुकाने पर ब्याज में छूट)। नज़दीकी बैंक में आधार, ज़मीन के कागज़ और फोटो के साथ आवेदन करें।",
+en:"Kisan Credit Card gives low-interest farm credit (interest subvention on timely repayment). Apply at your bank with Aadhaar, land papers and a photo."},
+{k:["mitti","मिट्टी","soil","जांच","jaanch"],src:"Soil Health Card scheme",
+hi:"मिट्टी की जाँच मुफ़्त में मृदा स्वास्थ्य कार्ड योजना से कराएँ। रिपोर्ट के अनुसार खाद डालने से लागत घटती है और पैदावार बढ़ती है।",
+en:"Get free soil testing under the Soil Health Card scheme. Fertilising as per the report cuts cost and raises yield."}];
+const PRICE={Lucknow:{Wheat:[2450,1],Rice:[2320,-1],Potato:[1250,1],Mustard:[6150,1],Tomato:[2100,-1],Sugarcane:[385,1]},
+Kanpur:{Wheat:[2435,1],Rice:[2300,1],Potato:[1180,-1],Mustard:[6080,1],Tomato:[1950,1],Sugarcane:[385,1]},
+Varanasi:{Wheat:[2410,-1],Rice:[2350,1],Potato:[1300,1],Mustard:[6200,-1],Tomato:[2250,1],Sugarcane:[385,1]}};
+const CROPS={wheat:"Wheat",gehun:"Wheat",gehu:"Wheat","गेहूं":"Wheat",rice:"Rice",dhan:"Rice","धान":"Rice",potato:"Potato",aloo:"Potato","आलू":"Potato",mustard:"Mustard",sarson:"Mustard","सरसों":"Mustard",tomato:"Tomato",tamatar:"Tomato","टमाटर":"Tomato",sugarcane:"Sugarcane",ganna:"Sugarcane","गन्ना":"Sugarcane"};
+const $=id=>document.getElementById(id),L=()=>$("lang").value.startsWith("hi")?"hi":"en";
+const T={hi:{ph:"अपना सवाल लिखें…",hello:"नमस्ते! मैं किसानवाणी हूँ। फसल रोग, मंडी भाव या सरकारी योजना के बारे में पूछिए।",fb:"मुझे इसका पक्का जवाब नहीं मिला। ग़लत सलाह से बचने के लिए कृपया किसान कॉल सेंटर 1800-180-1551 पर फोन करें या नज़दीकी कृषि विज्ञान केंद्र (KVK) जाएँ।",price:"भाव",img:"फोटो मिली। सही सलाह के लिए बताइए: फसल कौन-सी है और पत्तों पर क्या दिख रहा है (रंग, धब्बे, कीड़े)?",chips:["गेहूं के पत्ते पीले हो रहे हैं","गेहूं का भाव क्या है","पीएम किसान के बारे में बताओ","सरसों में माहू लगा है"]},
+en:{ph:"Type your question…",hello:"Hello! I’m KisanVaani. Ask about crop diseases, mandi prices or government schemes.",fb:"I’m not confident about this one. To avoid wrong advice, please call the Kisan Call Centre at 1800-180-1551 or visit your nearest KVK.",price:"Prices",img:"Photo received. To advise correctly, tell me the crop and what you see on the leaves (colour, spots, insects).",chips:["Wheat leaves turning yellow","What is the wheat price","Tell me about PM-KISAN","Aphids on my mustard"]}};
+function add(c,t,s){const d=document.createElement("div");d.className="m "+c;d.textContent=t;if(s){const e=document.createElement("span");e.className="src";e.textContent="Source: "+s;d.appendChild(e)}$("chat").appendChild(d);$("chat").scrollTop=1e9}
+let AUDIO=null;
+async function speak(t){try{const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t})});if(r.ok){if(AUDIO)AUDIO.pause();AUDIO=new Audio(URL.createObjectURL(await r.blob()));AUDIO.play();return}}catch(e){}speakBrowser(t)}
+function speakBrowser(t){if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=$("lang").value;const v=speechSynthesis.getVoices().find(x=>x.lang.replace("_","-")===u.lang)||speechSynthesis.getVoices().find(x=>x.lang.startsWith(u.lang.slice(0,2)));if(v)u.voice=v;u.rate=.95;speechSynthesis.speak(u)}
+function priceText(c){const l=L(),d=$("dist").value,r=PRICE[d][c];return l=="hi"?`${d} मंडी में ${c} का भाव लगभग ₹${r[0]} प्रति क्विंटल है (डेमो डेटा)।`:`${c} in ${d} mandi is about ₹${r[0]} per quintal (demo data).`}
+function answer(q){const l=L(),s=q.toLowerCase();
+for(const k in CROPS)if(s.includes(k)&&/(price|bhav|bhaw|rate|भाव|दाम|मंडी|mandi|कीमत)/.test(s))return{t:priceText(CROPS[k]),s:"Mandi price tool"};
+let best=null,sc=0;for(const e of KB){let n=0;for(const k of e.k)if(s.includes(k.toLowerCase()))n+=k.length>3?2:1;if(n>sc){sc=n;best=e}}
+if(best&&sc>=2)return{t:best[l],s:best.src};return{t:T[l].fb,s:null}}
+function ask(q){q=q.trim();if(!q)return;add("u",q);const a=answer(q);add("b",a.t,a.s);speak(a.t);$("q").value=""}
+function chips(){const l=L();$("chips").innerHTML="";T[l].chips.forEach(c=>{const b=document.createElement("button");b.textContent=c;b.onclick=()=>ask(c);$("chips").appendChild(b)});$("q").placeholder=T[l].ph}
+function prices(){const d=$("dist").value;$("pt").innerHTML="<tr><th>Crop</th><th>Price</th><th></th></tr>"+Object.entries(PRICE[d]).map(([c,v])=>`<tr><td>${c}</td><td>₹${v[0]}</td><td class="${v[1]>0?"up":"dn"}">${v[1]>0?"▲":"▼"}</td></tr>`).join("")}
+$("go").onclick=()=>ask($("q").value);$("q").onkeydown=e=>{if(e.key==="Enter")ask($("q").value)};
+$("lang").onchange=()=>{chips();add("b",T[L()].hello)};$("dist").onchange=prices;
+$("th").onclick=()=>{const r=document.documentElement,d=matchMedia("(prefers-color-scheme:dark)").matches,cur=r.dataset.theme||(d?"dark":"light");r.dataset.theme=cur=="dark"?"light":"dark"};
+$("img").onchange=e=>{const f=e.target.files[0];if(!f)return;const p=$("pv");p.src=URL.createObjectURL(f);p.style.display="block";add("u","📷 "+f.name);add("b",T[L()].img);speak(T[L()].img)};
+$("chk").onclick=()=>{const a=$("land").value,t=$("inst").value,l=L();let m;
+if(a=="n")m=l=="hi"?"पीएम-किसान के लिए ज़मीन ज़रूरी है। आप KCC (पशुपालन/मत्स्य) और मनरेगा देख सकते हैं।":"PM-KISAN needs land ownership. Consider KCC (animal husbandry/fisheries) and MGNREGA.";
+else if(t=="y")m=l=="hi"?"आयकर दाता होने पर पीएम-किसान पात्र नहीं है। फसल बीमा (PMFBY) और KCC लिए जा सकते हैं।":"Income-tax payers are not eligible for PM-KISAN. PMFBY and KCC are still open to you.";
+else m=l=="hi"?"आप पीएम-किसान (₹6,000/वर्ष), फसल बीमा (PMFBY) और KCC के लिए पात्र हो सकते हैं। आधार और ज़मीन के कागज़ तैयार रखें।":"You may be eligible for PM-KISAN (₹6,000/yr), PMFBY and KCC. Keep Aadhaar and land records ready.";
+$("sr").textContent=m;speak(m)};
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null;
+$("mic").onclick=()=>{if(!SR){add("b","Voice input isn’t supported in this browser. Please use Chrome, or type your question.");return}
+if(rec){rec.stop();return}rec=new SR();rec.lang=$("lang").value;rec.interimResults=false;$("mic").classList.add("on");
+rec.onresult=e=>ask(e.results[0][0].transcript);rec.onend=rec.onerror=()=>{$("mic").classList.remove("on");rec=null};rec.start()};
+speechSynthesis&&(speechSynthesis.onvoiceschanged=()=>{});
+chips();prices();add("b",T.hi.hello);
+</script></body></html>
